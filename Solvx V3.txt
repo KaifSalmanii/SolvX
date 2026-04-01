@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SolvX EMI Calculator - Premium UI</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: { primary: '#6366f1', secondary: '#a855f7' },
+                    fontFamily: { sans: ['Poppins', 'sans-serif'] }
+                }
+            }
+        }
+    </script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        body { margin: 0; padding: 0; overflow-x: hidden; transition: background-color 0.3s, color 0.3s; }
+        
+        /* Splash Screen */
+        #splash { position: fixed; inset: 0; z-index: 99999; display: flex; flex-direction: column; align-items: center; justify-content: center; animation: hideSplash 0.5s ease forwards 1.2s; }
+        @keyframes hideSplash { from { opacity: 1; visibility: visible; } to { opacity: 0; visibility: hidden; pointer-events: none; } }
+        .loader-ring { width: 45px; height: 45px; border: 4px solid rgba(99, 102, 241, 0.2); border-top: 4px solid #6366f1; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* Custom Range Slider */
+        input[type=range] { -webkit-appearance: none; width: 100%; background: transparent; pointer-events: none; outline: none; margin-top: 15px; }
+        input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 6px; border-radius: 10px; background: #cbd5e1; transition: background 0.3s; }
+        .dark input[type=range]::-webkit-slider-runnable-track { background: #334155; }
+        input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 22px; width: 22px; border-radius: 50%; background: #6366f1; cursor: pointer; margin-top: -8px; pointer-events: auto; box-shadow: 0 0 0 4px #ffffff; transition: box-shadow 0.3s; }
+        .dark input[type=range]::-webkit-slider-thumb { box-shadow: 0 0 0 4px #1e293b; }
+
+        /* Custom Scrollbar for Table */
+        .table-scroll::-webkit-scrollbar { width: 4px; }
+        .table-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 4px; }
+        .dark .table-scroll::-webkit-scrollbar-thumb { background-color: #475569; }
+
+        /* Glass / Card Effects */
+        .ui-card { transition: all 0.3s ease; }
+        .ui-card:hover { transform: translateY(-2px); }
+
+        /* Modal Styles */
+        .modal { display: none; position: fixed; z-index: 10000; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(5px); }
+        .modal-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 400px; animation: popIn 0.3s ease-out; }
+        @keyframes popIn { from { opacity: 0; transform: translate(-50%, -45%) scale(0.95); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 dark:bg-[#0b0e14] dark:text-gray-100 font-sans">
+
+<div id="splash" class="bg-white dark:bg-[#0b0e14]">
+    <div class="loader-ring"></div>
+    <h1 class="text-xl font-bold mt-5 tracking-widest text-indigo-600 dark:text-indigo-400 uppercase">SolvX</h1>
+    <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 font-semibold tracking-wider">by Kaif Salmani</p>
+</div>
+
+<div class="max-w-4xl mx-auto p-4 md:p-6 pb-12">
+    <header class="flex justify-between items-center mb-6 mt-2 bg-white dark:bg-gray-800 p-4 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">SolvX <span class="text-lg">🇮🇳</span></h1>
+            <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold tracking-wider uppercase mt-1">v3.0 • Kaif Salmani</p>
+        </div>
+        <div class="flex items-center gap-3">
+            <button onclick="toggleTheme()" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-600 dark:text-yellow-400 hover:bg-gray-200 dark:hover:bg-gray-600 transition shadow-sm border border-gray-200 dark:border-gray-600">
+                <i class="fas fa-sun hidden dark:block text-lg"></i>
+                <i class="fas fa-moon block dark:hidden text-lg"></i>
+            </button>
+            <button onclick="openM('feedModal')" class="w-10 h-10 rounded-full bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition border border-indigo-200 dark:border-indigo-500/30">
+                <i class="fas fa-comment-dots text-lg"></i>
+            </button>
+            <button onclick="openM('guideModal')" class="w-10 h-10 rounded-full bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-gray-600 transition border border-gray-200 dark:border-gray-600">
+                <i class="fas fa-info-circle text-lg"></i>
+            </button>
+        </div>
+    </header>
+
+    <div class="flex p-1 bg-gray-200 dark:bg-gray-800 rounded-xl mb-6 shadow-inner border border-gray-300/50 dark:border-gray-700">
+        <button id="tabRoi" onclick="setMode('roi')" class="tab-btn flex-1 py-2.5 text-xs font-bold rounded-lg transition-all duration-300">Rate</button>
+        <button id="tabEmi" onclick="setMode('emi')" class="tab-btn flex-1 py-2.5 text-xs font-bold rounded-lg transition-all duration-300">EMI</button>
+        <button id="tabTenure" onclick="setMode('tenure')" class="tab-btn flex-1 py-2.5 text-xs font-bold rounded-lg transition-all duration-300">Time</button>
+        <button id="tabAmt" onclick="setMode('amt')" class="tab-btn flex-1 py-2.5 text-xs font-bold rounded-lg transition-all duration-300">Amount</button>
+    </div>
+
+    <div class="lg:grid lg:grid-cols-12 lg:gap-8">
+        
+        <div class="lg:col-span-5 space-y-6">
+            
+            <div class="bg-white dark:bg-gray-800 p-6 rounded-3xl shadow-sm border border-gray-200 dark:border-gray-700">
+                <div class="space-y-6">
+                    <div id="divAmt">
+                        <label class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Loan Amount (₹)</label>
+                        <div class="mt-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 flex items-center">
+                            <span class="text-gray-400 font-bold mr-2">₹</span>
+                            <input type="number" id="inpAmt" value="500000" class="w-full bg-transparent text-lg font-bold text-gray-900 dark:text-white outline-none">
+                        </div>
+                        <input type="range" id="rangeAmt" min="10000" max="5000000" step="10000" value="500000">
+                    </div>
+                    
+                    <div id="divTenure">
+                        <div class="flex justify-between items-end mb-2">
+                            <label class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Tenure</label>
+                            <select id="inpTenUnit" class="bg-gray-100 dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 font-bold text-[11px] px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 outline-none cursor-pointer" onchange="updateSliderRange()">
+                                <option value="mo">Months</option>
+                                <option value="yr">Years</option>
+                            </select>
+                        </div>
+                        <div class="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 flex items-center">
+                            <i class="far fa-calendar-alt text-gray-400 mr-3"></i>
+                            <input type="number" id="inpTen" value="12" class="w-full bg-transparent text-lg font-bold text-gray-900 dark:text-white outline-none">
+                        </div>
+                        <input type="range" id="rangeTen" min="1" max="360" value="12">
+                    </div>
+                    
+                    <div id="divRoi">
+                        <label class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Interest Rate (%)</label>
+                        <div class="mt-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 flex items-center">
+                            <i class="fas fa-percentage text-gray-400 mr-3"></i>
+                            <input type="number" id="inpRoi" value="10.5" step="0.1" class="w-full bg-transparent text-lg font-bold text-gray-900 dark:text-white outline-none">
+                        </div>
+                        <input type="range" id="rangeRoi" min="1" max="30" step="0.1" value="10.5">
+                    </div>
+                    
+                    <div id="divEmi" class="hidden">
+                        <label class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Monthly EMI (₹)</label>
+                        <div class="mt-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 flex items-center">
+                            <span class="text-gray-400 font-bold mr-2">₹</span>
+                            <input type="number" id="inpEmi" value="44000" class="w-full bg-transparent text-lg font-bold text-gray-900 dark:text-white outline-none">
+                        </div>
+                        <input type="range" id="rangeEmi" min="1000" max="500000" step="500" value="44000">
+                    </div>
+                    
+                    <button onclick="doCalc()" class="w-full mt-2 py-4 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-bold text-lg shadow-lg shadow-indigo-500/30 active:scale-95 transition-all">Calculate Now 🚀</button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-4 gap-3">
+                <div onclick="openM('donateModal')" class="ui-card bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-3 text-center cursor-pointer shadow-sm text-pink-500">
+                    <i class="fas fa-qrcode text-xl mb-1"></i><p class="text-[9px] font-bold uppercase">Donate</p>
+                </div>
+                <div onclick="location.reload()" class="ui-card bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-3 text-center cursor-pointer shadow-sm text-gray-500 dark:text-gray-400">
+                    <i class="fas fa-undo text-xl mb-1"></i><p class="text-[9px] font-bold uppercase">Reset</p>
+                </div>
+                <div onclick="openM('appModal')" class="ui-card bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-3 text-center cursor-pointer shadow-sm text-yellow-500">
+                    <i class="fas fa-rocket text-xl mb-1"></i><p class="text-[9px] font-bold uppercase">App</p>
+                </div>
+                <div onclick="shareApp()" class="ui-card bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-3 text-center cursor-pointer shadow-sm text-green-500">
+                    <i class="fas fa-share-alt text-xl mb-1"></i><p class="text-[9px] font-bold uppercase">Share</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="lg:col-span-7 mt-8 lg:mt-0 space-y-4">
+            
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl border-b-4 border-indigo-500 shadow-sm border border-gray-200 dark:border-gray-700 text-center">
+                    <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Monthly EMI</p>
+                    <h2 class="text-xl font-bold text-indigo-600 dark:text-indigo-400 mt-1" id="resEmi">₹0</h2>
+                </div>
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl border-b-4 border-yellow-500 shadow-sm border border-gray-200 dark:border-gray-700 text-center">
+                    <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Total Tenure</p>
+                    <h2 class="text-xl font-bold text-yellow-600 dark:text-yellow-500 mt-1" id="resTen">0 Mo</h2>
+                </div>
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl border-b-4 border-pink-500 shadow-sm border border-gray-200 dark:border-gray-700 text-center">
+                    <p class="text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase">Total Interest</p>
+                    <h2 class="text-xl font-bold text-pink-500 dark:text-pink-400 mt-1" id="resInt">₹0</h2>
+                </div>
+                <div class="bg-indigo-50 dark:bg-green-900/10 p-4 rounded-2xl border-b-4 border-green-500 shadow-sm border border-indigo-100 dark:border-green-500/20 text-center col-span-2 sm:col-span-1">
+                    <p class="text-[10px] text-gray-600 dark:text-gray-400 font-bold uppercase">Total Payment</p>
+                    <h2 class="text-xl font-bold text-green-600 dark:text-green-400 mt-1" id="resTotal">₹0</h2>
+                </div>
+            </div>
+
+            <div class="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800/50 p-4 rounded-2xl text-center shadow-sm">
+                <p class="text-[10px] text-blue-500 dark:text-blue-400 font-bold uppercase mb-1"><i class="fas fa-lightbulb mr-1"></i> Loan Insights</p>
+                <p class="text-xs text-blue-900 dark:text-blue-200 font-medium" id="resInsights">Aap apne principal par <strong class="text-pink-500">0%</strong> extra interest pay kar rahe hain.</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <h3 class="text-[10px] text-center text-gray-500 dark:text-gray-400 font-bold uppercase border-b border-gray-100 dark:border-gray-700 pb-2 mb-3">Avg. Interest Amt</h3>
+                    <div class="space-y-3 text-center">
+                        <div><p class="text-[9px] text-gray-400 font-bold uppercase">Yearly</p><h2 class="text-sm font-bold text-red-500" id="resYrInt">₹0</h2></div>
+                        <div><p class="text-[9px] text-gray-400 font-bold uppercase">Monthly</p><h2 class="text-sm font-bold text-orange-500" id="resMoInt">₹0</h2></div>
+                        <div><p class="text-[9px] text-gray-400 font-bold uppercase">Daily</p><h2 class="text-sm font-bold text-blue-500" id="resDyInt">₹0</h2></div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                    <h3 class="text-[10px] text-center text-gray-500 dark:text-gray-400 font-bold uppercase border-b border-gray-100 dark:border-gray-700 pb-2 mb-3">Rate (%) Detail</h3>
+                    <div class="space-y-3 text-center">
+                        <div><p class="text-[9px] text-gray-400 font-bold uppercase">Yearly</p><h2 class="text-sm font-bold text-purple-500" id="resYrRate">0%</h2></div>
+                        <div><p class="text-[9px] text-gray-400 font-bold uppercase">Monthly</p><h2 class="text-sm font-bold text-purple-500" id="resMoRate">0%</h2></div>
+                        <div><p class="text-[9px] text-gray-400 font-bold uppercase">Daily</p><h2 class="text-sm font-bold text-purple-500" id="resDyRate">0%</h2></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 p-5 rounded-3xl border border-gray-200 dark:border-gray-700 shadow-sm flex justify-around items-center">
+                <div style="width: 120px;"><canvas id="chartD"></canvas></div>
+                <div style="width: 140px;"><canvas id="chartB"></canvas></div>
+            </div>
+
+            <div class="bg-white dark:bg-gray-800 p-5 rounded-3xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-[11px] font-bold uppercase text-indigo-600 dark:text-indigo-400"><i class="fas fa-list-ol mr-1"></i> Monthly Breakdown</h3>
+                    <button onclick="downloadPDF()" class="bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 text-red-500 dark:text-red-400 border border-red-200 dark:border-red-800/50 text-[10px] px-4 py-1.5 rounded-lg font-bold uppercase transition">Download PDF</button>
+                </div>
+                <div class="overflow-y-auto table-scroll pr-2" style="max-height: 200px;">
+                    <table class="w-full text-[10px] text-left" id="emiTable">
+                        <thead class="text-gray-500 dark:text-gray-400 sticky top-0 bg-white dark:bg-gray-800 shadow-sm">
+                            <tr><th class="p-2">Mo.</th><th class="p-2">EMI</th><th class="p-2">Prin.</th><th class="p-2">Int.</th><th class="p-2">Bal.</th></tr>
+                        </thead>
+                        <tbody id="tableBody" class="divide-y divide-gray-100 dark:divide-gray-700/50 text-gray-700 dark:text-gray-300 font-medium"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div id="donateModal" class="modal"><div class="modal-content bg-white dark:bg-gray-800 rounded-3xl p-6 text-center shadow-2xl border border-gray-200 dark:border-gray-700">
+    <h2 class="text-xl font-bold text-pink-500 mb-2">Donate Support ❤️</h2>
+    <div class="bg-white p-2 rounded-xl inline-block border-2 border-pink-100 dark:border-pink-900 mb-2 shadow-sm">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=upi://pay?pa=kaifsalmani@ptyes&pn=Kaif%20Salmani" alt="QR" class="rounded-lg">
+    </div>
+    <p class="text-xs font-bold text-gray-700 dark:text-gray-300 mb-4">UPI: kaifsalmani@ptyes</p>
+    <div class="text-left text-[11px] text-gray-600 dark:text-gray-400 space-y-2 bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
+        <p>1️⃣ Is QR ka Screenshot lein.</p>
+        <p>2️⃣ Kisi bhi UPI app (GPay, PhonePe) mein jayein.</p>
+        <p>3️⃣ Screenshot scan karke payment karein.</p>
+    </div>
+    <button onclick="closeM('donateModal', true)" class="w-full mt-5 py-3.5 bg-pink-500 hover:bg-pink-600 text-white rounded-xl text-xs font-bold uppercase shadow-lg shadow-pink-500/30 transition">Close Now</button>
+</div></div>
+
+<div id="guideModal" class="modal"><div class="modal-content bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-2xl border border-gray-200 dark:border-gray-700">
+    <h2 class="text-xl font-bold text-indigo-600 dark:text-indigo-400 mb-4 text-center">SolvX Pro Information</h2>
+    <div class="text-left text-[11px] text-gray-600 dark:text-gray-300 space-y-4 leading-relaxed bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-700">
+        <p><b class="text-gray-800 dark:text-gray-100">App Info:</b> SolvX ek premium toolkit hai jo loan aur interest calculations ko 100% precision ke sath solve karta hai.</p>
+        <p><b class="text-gray-800 dark:text-gray-100">Developer:</b> Kaif Salmani, <i>18 years old.</i> I build simple, fast and user-friendly web tools that help people calculate and solve everyday tasks easily.</p>
+        <p><b class="text-gray-800 dark:text-gray-100">Instagram:</b> @oyeeee_kaif</p>
+    </div>
+    <a href="https://instagram.com/oyeeee_kaif" target="_blank" class="block w-full py-3.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-center rounded-xl font-bold text-white uppercase mt-4 shadow-lg shadow-purple-500/30 transition">Follow @oyeeee_kaif</a>
+    <button onclick="closeM('guideModal')" class="w-full mt-3 py-3.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-xl text-xs font-bold uppercase transition">Close Info</button>
+</div></div>
+
+<div id="modeModal" class="modal"><div class="modal-content bg-white dark:bg-gray-800 rounded-3xl p-6 text-center shadow-2xl border border-gray-200 dark:border-gray-700">
+    <h2 id="mTitle" class="text-xl font-bold text-indigo-600 dark:text-indigo-400 mb-2"></h2>
+    <p id="mDesc" class="text-xs text-gray-600 dark:text-gray-400 leading-relaxed bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-100 dark:border-gray-700"></p>
+    <button onclick="closeM('modeModal')" class="w-full mt-5 py-3.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl text-xs font-bold uppercase shadow-lg shadow-indigo-500/30 transition">OK Start</button>
+</div></div>
+
+<div id="feedModal" class="modal"><div class="modal-content bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-2xl border border-gray-200 dark:border-gray-700">
+    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-4 text-center">Feedback 💬</h2>
+    <textarea id="feedText" class="w-full p-4 h-28 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-xl mb-4 text-xs outline-none focus:ring-2 focus:ring-indigo-500 resize-none" placeholder="Aapka feedback likhein..."></textarea>
+    <div class="flex gap-3">
+        <button onclick="closeM('feedModal')" class="flex-1 py-3.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50 rounded-xl font-bold uppercase text-[10px] transition">Cancel</button>
+        <button onclick="sendFeed()" class="flex-[2] py-3.5 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold uppercase text-[10px] shadow-lg shadow-green-500/30 transition">Send WhatsApp</button>
+    </div>
+</div></div>
+
+<div id="appModal" class="modal"><div class="modal-content bg-white dark:bg-gray-800 rounded-3xl p-6 text-center shadow-2xl border border-gray-200 dark:border-gray-700">
+    <div class="w-16 h-16 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-500 rounded-full mx-auto flex items-center justify-center mb-4 text-3xl"><i class="fas fa-rocket"></i></div>
+    <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-2">Coming Soon</h2>
+    <p class="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-700">SolvX App Play Store par jald hi upload hogi!</p>
+    <button onclick="closeM('appModal')" class="w-full mt-5 py-3.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl text-xs font-bold uppercase shadow-lg shadow-yellow-500/30 transition">Theek Hai</button>
+</div></div>
+
+<div id="msgModal" class="modal"><div class="modal-content bg-white dark:bg-gray-800 rounded-3xl p-6 text-center shadow-2xl border border-gray-200 dark:border-gray-700">
+    <div class="w-16 h-16 bg-green-100 dark:bg-green-900/30 text-green-500 rounded-full mx-auto flex items-center justify-center mb-4 text-3xl"><i class="fas fa-heart"></i></div>
+    <h2 id="msgTitle" class="text-xl font-bold text-gray-900 dark:text-white mb-2"></h2>
+    <p id="msgDesc" class="text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 p-3 rounded-xl border border-gray-100 dark:border-gray-700"></p>
+    <button onclick="closeM('msgModal')" class="w-full mt-5 py-3.5 bg-gray-800 hover:bg-gray-900 dark:bg-gray-700 dark:hover:bg-gray-600 text-white rounded-xl text-xs font-bold uppercase transition">Close</button>
+</div></div>
+
+<script>
+    const D = document;
+    let cD = null, cB = null, mode = 'roi';
+
+    // Formatting Function (Indian Number System)
+    const formatInr = (num) => new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 }).format(num);
+
+    // Theme Toggle Logic
+    function initTheme() {
+        if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            D.documentElement.classList.add('dark');
+        } else {
+            D.documentElement.classList.remove('dark');
+        }
+    }
+    function toggleTheme() {
+        D.documentElement.classList.toggle('dark');
+        localStorage.setItem('theme', D.documentElement.classList.contains('dark') ? 'dark' : 'light');
+        doCalc(); // Re-render charts for colors if needed (kept simple for now)
+    }
+    initTheme();
+
+    function openM(id) { D.getElementById(id).style.display = 'block'; }
+    function closeM(id, isD = false) { 
+        D.getElementById(id).style.display = 'none';
+        if(isD) showMsg("Dhanyawad • Thanks! ❤️", "Aapka support mere liye bohot important hai.");
+    }
+    function showMsg(t, d) { D.getElementById('msgTitle').innerText = t; D.getElementById('msgDesc').innerText = d; openM('msgModal'); }
+
+    function setMode(m) {
+        mode = m;
+        const info = {
+            roi: { t: "Interest Rate Mode", d: "Is mode mein Loan Amount aur EMI ke base par Interest Rate nikal sakte hain." },
+            emi: { t: "EMI Mode", d: "Apne loan aur rate ke sath monthly payment (EMI) calculate karein." },
+            tenure: { t: "Tenure Mode", d: "Pata karein ki aapka loan kitne mahino mein poora khatam hoga." },
+            amt: { t: "Loan Amount Mode", d: "Apne budget ke hisab se maximum loan eligibility check karein." }
+        };
+        
+        // UI Tab styling
+        D.querySelectorAll('.tab-btn').forEach(b => {
+            b.className = "tab-btn flex-1 py-2.5 text-xs font-bold rounded-lg transition-all duration-300 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200";
+        });
+        let activeTab = D.getElementById('tab' + m.charAt(0).toUpperCase() + m.slice(1));
+        activeTab.className = "tab-btn flex-1 py-2.5 text-xs font-bold rounded-lg transition-all duration-300 bg-white dark:bg-gray-600 text-indigo-600 dark:text-white shadow-sm border border-gray-200 dark:border-gray-500";
+
+        // Show/Hide Inputs
+        D.getElementById('divRoi').classList.toggle('hidden', m === 'roi');
+        D.getElementById('divEmi').classList.toggle('hidden', m !== 'roi' && m !== 'tenure' && m !== 'amt');
+        D.getElementById('divTenure').classList.toggle('hidden', m === 'tenure');
+        D.getElementById('divAmt').classList.toggle('hidden', m === 'amt');
+
+        D.getElementById('mTitle').innerText = info[m].t; D.getElementById('mDesc').innerText = info[m].d; openM('modeModal');
+    }
+
+    function updateSliderRange() { D.getElementById('rangeTen').max = (D.getElementById('inpTenUnit').value === 'yr') ? 30 : 360; }
+
+    function doCalc() {
+        let P = parseFloat(D.getElementById('inpAmt').value) || 0;
+        let r = parseFloat(D.getElementById('inpRoi').value) || 0;
+        let E = parseFloat(D.getElementById('inpEmi').value) || 0;
+        let t = parseFloat(D.getElementById('inpTen').value) || 0;
+        let n = (D.getElementById('inpTenUnit').value === 'yr') ? t * 12 : t;
+        let fE, fP, fN, fR;
+
+        if(mode === 'roi') {
+            let low = 0, high = 100;
+            for(let i=0; i<30; i++) {
+                let mid = (low + high) / 2, testR = (mid / 12) / 100;
+                let testE = (testR === 0) ? P/n : P * testR * Math.pow(1+testR, n) / (Math.pow(1+testR, n) - 1);
+                if(testE > E) high = mid; else low = mid;
+            }
+            fR = low; fE = E; fP = P; fN = n;
+        } else if(mode === 'emi') {
+            let rm = (r / 12) / 100;
+            fE = (rm === 0) ? P/n : P * rm * Math.pow(1+rm, n) / (Math.pow(1+rm, n) - 1);
+            fR = r; fP = P; fN = n;
+        } else if(mode === 'tenure') {
+            let rm = (r / 12) / 100;
+            fN = Math.log(E / (E - P * rm)) / Math.log(1 + rm);
+            fE = E; fR = r; fP = P;
+        } else {
+            let rm = (r / 12) / 100;
+            fP = E * (Math.pow(1+rm, n) - 1) / (rm * Math.pow(1+rm, n));
+            fE = E; fR = r; fN = n;
+        }
+
+        fN = Math.round(fN);
+        let total = fE * fN, interest = total - fP;
+
+        // Populate Main Results
+        D.getElementById('resEmi').innerText = "₹" + formatInr(fE);
+        D.getElementById('resTen').innerText = fN + " Mo";
+        D.getElementById('resInt').innerText = "₹" + formatInr(interest);
+        D.getElementById('resTotal').innerText = "₹" + formatInr(total);
+
+        // Insight Calculation
+        let intPercent = fP > 0 ? ((interest / fP) * 100).toFixed(1) : 0;
+        D.getElementById('resInsights').innerHTML = `Aap apne principal par <strong class="text-pink-500 dark:text-pink-400">${intPercent}%</strong> extra interest pay kar rahe hain.`;
+
+        // Interest Amount Breakdown
+        let avgMoInt = interest / fN;
+        let avgYrInt = avgMoInt * 12;
+        let avgDyInt = avgYrInt / 365;
+
+        if (!isFinite(avgMoInt) || isNaN(avgMoInt)) { avgMoInt = 0; avgYrInt = 0; avgDyInt = 0; }
+
+        D.getElementById('resYrInt').innerText = "₹" + formatInr(avgYrInt);
+        D.getElementById('resMoInt').innerText = "₹" + formatInr(avgMoInt);
+        D.getElementById('resDyInt').innerText = "₹" + formatInr(avgDyInt);
+
+        // Interest Rate Breakdown
+        let moRate = fR / 12;
+        let dyRate = fR / 365;
+        
+        D.getElementById('resYrRate').innerText = fR.toFixed(2) + "%";
+        D.getElementById('resMoRate').innerText = moRate.toFixed(3) + "%";
+        D.getElementById('resDyRate').innerText = dyRate.toFixed(4) + "%";
+
+        // Charts update
+        if(window.Chart) {
+            Chart.defaults.color = D.documentElement.classList.contains('dark') ? '#9ca3af' : '#4b5563';
+            
+            const ctxD = D.getElementById('chartD').getContext('2d');
+            if(cD) cD.destroy();
+            cD = new Chart(ctxD, { type: 'doughnut', data: { datasets: [{ data: [fP, interest], backgroundColor: ['#6366f1', '#f472b6'], borderWidth: 0 }] }, options: { plugins: { legend: { display: false } }, cutout: '75%' } });
+            
+            const ctxB = D.getElementById('chartB').getContext('2d');
+            if(cB) cB.destroy();
+            cB = new Chart(ctxB, { type: 'bar', data: { labels: ['Prin.', 'Int.'], datasets: [{ data: [fP, interest], backgroundColor: ['#6366f1', '#f472b6'], borderRadius: 4 }] }, options: { plugins: { legend: { display: false } }, scales: { y: { display: false, grid: {display: false} }, x: { grid: {display: false}, border: {display: false} } } } });
+        }
+
+        // Table Update
+        let bal = fP, rm_rate = (fR / 12) / 100, rows = "";
+        for(let i=1; i<=Math.min(fN, 360); i++) {
+            let iAmt = bal * rm_rate, pAmt = fE - iAmt;
+            bal -= pAmt;
+            rows += `<tr class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition"><td class="p-2 border-b border-gray-100 dark:border-gray-700/50">${i}</td><td class="p-2 border-b border-gray-100 dark:border-gray-700/50 text-indigo-500 dark:text-indigo-400">₹${formatInr(fE)}</td><td class="p-2 border-b border-gray-100 dark:border-gray-700/50 text-green-500 dark:text-green-400">₹${formatInr(pAmt)}</td><td class="p-2 border-b border-gray-100 dark:border-gray-700/50 text-pink-500 dark:text-pink-400">₹${formatInr(iAmt)}</td><td class="p-2 border-b border-gray-100 dark:border-gray-700/50 text-yellow-600 dark:text-yellow-500">₹${Math.max(0, Math.round(bal)).toLocaleString('en-IN')}</td></tr>`;
+        }
+        D.getElementById('tableBody').innerHTML = rows;
+    }
+
+    function sendFeed() { let m = D.getElementById('feedText').value; if(m.trim()) { window.open(`https://wa.me/9457860626?text=${encodeURIComponent(m)}`, '_blank'); closeM('feedModal'); } }
+    function shareApp() { if (navigator.share) navigator.share({ title: 'SolvX EMI Calculator', text: 'Professional loan calculator by Kaif Salmani.', url: window.location.href }); }
+    function downloadPDF() { const doc = new jspdf.jsPDF(); doc.text("SolvX Loan Report", 14, 20); doc.autoTable({ html: '#emiTable', startY: 30, theme: 'grid' }); doc.save("SolvX_Report.pdf"); }
+
+    window.onload = () => { 
+        function sync(r, i) {
+            const ra = D.getElementById(r), inP = D.getElementById(i);
+            ra.oninput = () => { inP.value = ra.value; doCalc(); };
+            inP.oninput = () => { ra.value = inP.value; doCalc(); };
+        }
+        sync('rangeAmt', 'inpAmt'); sync('rangeTen', 'inpTen'); sync('rangeRoi', 'inpRoi'); sync('rangeEmi', 'inpEmi');
+        setMode('roi'); 
+        doCalc(); 
+    };
+</script>
+</body>
+</html>
